@@ -12,6 +12,7 @@ import { deleteFileWithRclone } from './src/rclone/delete_file_with_rclone.js';
 import { setupDatabase } from './src/setup_database.js';
 import { randomCustomString } from './src/random_custom_string.js';
 import { getFileDoc } from './src/get_file_doc.js';
+import { uploadRequirementMiddleware } from './src/middlewares/upload_requirement_middleware.js';
 
 await setupDatabase();
 
@@ -100,10 +101,7 @@ app.put('/upload', authenticationMiddleware, saveUploadedFileMiddleware(uploadOp
     await pool.query(query, values);
 });
 
-app.head('/upload', (req, res) => {
-    // TODO
-    console.log("head /upload")
-});
+app.head('/upload', uploadRequirementMiddleware);
 
 app.get('/list/:pubkey', async (req, res) => {
     const pubkey = req.params.pubkey;
@@ -154,12 +152,7 @@ app.put('/mirror', (req, res) => {
     res.send('Hello World!');
 });
 
-app.head('/media', (req, res) => {
-    console.log("head /media")
-
-    // TODO
-    res.send('Hello World!');
-});
+app.head('/media', uploadRequirementMiddleware);
 
 app.put('/media', (req, res) => {
     console.log("put /media")
