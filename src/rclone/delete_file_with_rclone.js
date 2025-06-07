@@ -1,14 +1,14 @@
 import axios from "axios";
 
 export async function deleteFileWithRclone(sha256) {
-    const rcloneApiUrl = 'http://localhost:5572/operations/deletefile';
+    const rcloneApiUrl = 'http://rclone:5572/operations/deletefile';
     const auth = {
         username: process.env.RCLONE_USERNAME,
         password: process.env.RCLONE_PASSWORD,
     };
 
     const params = {
-        fs: `${process.env.RCLONE_REMOTE}:`,
+        fs: "bucket:",
         remote: sha256,
     };
 

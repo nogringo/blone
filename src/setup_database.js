@@ -1,3 +1,7 @@
+import { pool } from "./repository.js";
+
+// SQL statements to check if tables exist and create them if not
+const setupQueries = `
 CREATE TABLE IF NOT EXISTS files (
     pubkey TEXT NOT NULL,
     sha256 VARCHAR(64) NOT NULL UNIQUE,
@@ -28,3 +32,15 @@ CREATE TRIGGER trg_record_deleted_file
 AFTER DELETE ON files
 FOR EACH ROW
 EXECUTE FUNCTION record_deleted_file();
+
+`;
+
+// Execute the setup queries
+export async function setupDatabase() {
+  try {
+    await pool.query(setupQueries);
+    console.log('Database setup completed successfully');
+  } catch (error) {
+    console.error('Error setting up database:', error);
+  }
+}

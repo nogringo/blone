@@ -1,39 +1,38 @@
 services:
   db:
-    image: postgres
-    ports:
-      - "5432:5432"
-    restart: always
-    # set shared memory limit when using docker compose
-    shm_size: 128mb
-    # or set shared memory limit when deploy via swarm stack
-    #volumes:
-    #  - type: tmpfs
-    #    target: /dev/shm
-    #    tmpfs:
-    #      size: 134217728 # 128*2^20 bytes = 128Mb
+    image: postgres:latest
+    restart: unless-stopped
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     environment:
-      POSTGRES_PASSWORD: example
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
 
-  adminer:
-    image: adminer
-    restart: always
+  rclone:
+    image: rclone/rclone:latest
+    command: rcd --rc-addr=:5572 --rc-user=${RCLONE_USERNAME} --rc-pass=${RCLONE_PASSWORD}
+    volumes:
+      - rclone_config:/config
+      - bucket:/data
+    restart: unless-stopped
+
+  api:
+    # image: imageName
+    build: 
+      context: .
+      dockerfile: Dockerfile
     ports:
-      - 8080:8080
+      - "${BLOSSOM_API_PORT}:3000"
+    volumes:
+      - bucket:/data
+    restart: unless-stopped
+    environment:
+      DB_PASSWORD: ${DB_PASSWORD}
+      RCLONE_USERNAME: ${RCLONE_USERNAME}
+      RCLONE_PASSWORD: ${RCLONE_PASSWORD}
+      BLOSSOM_API_DOMAIN: ${BLOSSOM_API_DOMAIN}
+      MAX_FILE_SIZE: ${MAX_FILE_SIZE}
 
-  # rclone:
-  #   image: rclone/rclone:latest
-  #   container_name: rclone-api
-  #   command: rcd --rc-web-gui --rc-addr=:5572 --rc-user=admin --rc-pass=admin
-  #   ports:
-  #     - "5572:5572"
-  #   volumes:
-  #     - rclone_config:/config
-  #     - ./:/data
-  #   restart: unless-stopped
-
-# volumes:
-#   pgdata:
-#   rclone_config:
-#   rclone_data:
-#   postgres_data:
+volumes:
+  postgres_data:
+  rclone_config:
+  bucket:

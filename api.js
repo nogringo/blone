@@ -1,20 +1,25 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import { authenticationMiddleware } from './src/authentication_middleware.js';
+import { authenticationMiddleware } from './src/middlewares/authentication_middleware.js';
 import path from 'path';
 import fs from 'fs';
-import { saveUploadedFileMiddleware } from './src/rclone/save_uploaded_file_middleware.js';
-import { uploadFileWithRclone } from './src/upload_file_with_rclone.js';
-import { fileURLToPath } from 'url';
+import { saveUploadedFileMiddleware } from './src/middlewares/save_uploaded_file_middleware.js';
+import { uploadFileWithRclone } from './src/rclone/upload_file_with_rclone.js';
 import { downloadFileWithRclone } from './src/rclone/download_file_with_rclone.js';
 import { pool } from './src/repository.js';
+import { deleteFileWithRclone } from './src/rclone/delete_file_with_rclone.js';
+import { setupDatabase } from './src/setup_database.js';
+import { randomCustomString } from './src/random_custom_string.js';
+import { getFileDoc } from './src/get_file_doc.js';
+
+await setupDatabase();
 
 const app = express();
 
 const uploadOptions = {
-    uploadDir: 'bucket/upload',
-    maxFileSize: 1024 * 1024 * 1024 * 1,
+    uploadDir: '/data/upload',
+    maxFileSize: process.env.MAX_FILE_SIZE,
 };
 
 app.use(cors());
@@ -22,17 +27,13 @@ app.use(cors());
 app.get('/:fileName', async (req, res) => {
     const sha256 = req.params.fileName.split('.')[0];
 
-    const query = 'SELECT * FROM files WHERE sha256 = $1';
-    const values = [sha256];
-    const result = await pool.query(query, values);
-    if (result.rows.length == 0) {
-        return res.status(404).send("Sorry we can't find that");
-    }
-    const doc = result.rows[0];
+    const doc = await getFileDoc(sha256);
+    console.log(doc);
+    if (!doc) return res.status(404).end();
 
-    const __filename = fileURLToPath(import.meta.url);
-    const filePath = path.join(path.dirname(__filename), "bucket/download", sha256);
-    await downloadFileWithRclone(sha256, filePath);
+    const filePath = path.join(`/data/download/${randomCustomString(16)}`, sha256);
+    const rcloneSuccess = await downloadFileWithRclone(sha256, filePath);
+    if (!rcloneSuccess) return res.status(404).end();
 
     res.set('Content-Type', doc["mime_type"]);
     res.sendFile(filePath);
@@ -56,6 +57,17 @@ app.head('/:sha256', async (req, res) => {
 });
 
 app.put('/upload', authenticationMiddleware, saveUploadedFileMiddleware(uploadOptions), async (req, res) => {
+    const blobDescriptor = {
+        "url": `https://${process.env.BLOSSOM_API_DOMAIN}/${req.file.filename}`,
+        "sha256": req.file.sha256,
+        "size": req.file.size,
+        "type": req.file.mimetype,
+        "uploaded": Math.floor(Date.now() / 1000),
+    }
+
+    const file = await getFileDoc(req.file.sha256);
+    if (file) return res.json(blobDescriptor);
+
     const requiredVerb = "upload";
     const isValideVerb = req.verb == requiredVerb;
     if (!isValideVerb) {
@@ -66,18 +78,13 @@ app.put('/upload', authenticationMiddleware, saveUploadedFileMiddleware(uploadOp
         return res.status(401).json({ error: 'File hash must be in a x tag' });
     }
 
-    const __filename = fileURLToPath(import.meta.url);
-    const filePath = path.join(path.dirname(__filename), req.file.path);
+    const filePath = req.file.path;
+    console.log(req.file.path)
+    console.log(fs.readdirSync("/data/upload"))
     await uploadFileWithRclone(filePath);
     fs.unlinkSync(filePath);
 
-    res.json({
-        "url": `https://${process.env.BLOSSOM_API_DOMAIN}/${req.file.filename}`,
-        "sha256": req.file.sha256,
-        "size": req.file.size,
-        "type": req.file.mimetype,
-        "uploaded": Math.floor(Date.now() / 1000),
-    });
+    res.json(blobDescriptor);
 
     const query = `
       INSERT INTO files (pubkey, sha256, file_size, mime_type)
@@ -170,5 +177,5 @@ app.put('/report', (req, res) => {
 
 const port = process.env.BLOSSOM_API_PORT || 3000;
 app.listen(port, () => {
-    console.log(`Example app listening on port ${port}`);
+    console.log(`Blone listening on port ${port}`);
 });
