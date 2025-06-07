@@ -1,5 +1,6 @@
 import { Pool } from 'pg';
 
+export const maxFileSize = (process.env.MAX_FILE_SIZE || 10000000) * 1;
 export const pool = new Pool({
   host: 'db',
   user: 'postgres',

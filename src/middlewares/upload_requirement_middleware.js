@@ -1,3 +1,5 @@
+import { maxFileSize } from "../repository.js";
+
 export function uploadRequirementMiddleware(req, res) {
     const xContentLength = req.headers['x-content-length'];
 
@@ -7,9 +9,9 @@ export function uploadRequirementMiddleware(req, res) {
             .send('Length Required');
     }
 
-    if (xContentLength > process.env.MAX_FILE_SIZE) {
+    if (xContentLength > maxFileSize) {
         return res.status(413)
-            .set('X-Reason', `File too large. Max allowed size is ${process.env.MAX_FILE_SIZE}B.`)
+            .set('X-Reason', `File too large. Max allowed size is ${maxFileSize}B.`)
             .send('Content Too Large');
     }
 

@@ -7,7 +7,7 @@ import fs from 'fs';
 import { saveUploadedFileMiddleware } from './src/middlewares/save_uploaded_file_middleware.js';
 import { uploadFileWithRclone } from './src/rclone/upload_file_with_rclone.js';
 import { downloadFileWithRclone } from './src/rclone/download_file_with_rclone.js';
-import { pool } from './src/repository.js';
+import { maxFileSize, pool } from './src/repository.js';
 import { deleteFileWithRclone } from './src/rclone/delete_file_with_rclone.js';
 import { setupDatabase } from './src/setup_database.js';
 import { randomCustomString } from './src/random_custom_string.js';
@@ -20,7 +20,7 @@ const app = express();
 
 const uploadOptions = {
     uploadDir: '/data/upload',
-    maxFileSize: process.env.MAX_FILE_SIZE,
+    maxFileSize: maxFileSize,
 };
 
 app.use(cors());
