@@ -13,15 +13,20 @@ import { setupDatabase } from './src/setup_database.js';
 import { randomCustomString } from './src/random_custom_string.js';
 import { getFileDoc } from './src/get_file_doc.js';
 import { uploadRequirementMiddleware } from './src/middlewares/upload_requirement_middleware.js';
+import { requireVerbMiddleware } from './src/middlewares/require_verb_middleware.js';
+import { downloadBlobFromUrl } from './src/download_blob_from_url.js';
+import { newFileMiddleware } from './src/middlewares/new_file_middleware.js';
 
 await setupDatabase();
-
-const app = express();
 
 const uploadOptions = {
     uploadDir: '/data/upload',
     maxFileSize: maxFileSize,
 };
+
+const app = express();
+
+app.use(express.json());
 
 app.use(cors());
 
@@ -82,14 +87,8 @@ app.get('/:fileName', async (req, res) => {
     });
 });
 
-app.delete('/:sha256', authenticationMiddleware, async (req, res) => {
+app.delete('/:sha256', authenticationMiddleware, requireVerbMiddleware("delete"), async (req, res) => {
     const sha256 = req.params.sha256;
-
-    const requiredVerb = "delete";
-    const isValideVerb = req.verb == requiredVerb;
-    if (!isValideVerb) {
-        return res.status(401).json({ error: `Event t tag must be ${requiredVerb}` });
-    }
 
     if (!req.xTags.includes(req.params.sha256)) {
         return res.status(401).json({ error: 'File hash must be in a x tag' });
@@ -104,54 +103,28 @@ app.delete('/:sha256', authenticationMiddleware, async (req, res) => {
     res.end();
 });
 
-app.put('/upload', authenticationMiddleware, saveUploadedFileMiddleware(uploadOptions), async (req, res) => {
-    const blobDescriptor = {
-        "url": `https://${process.env.BLOSSOM_API_DOMAIN}/${req.file.filename}`,
-        "sha256": req.file.sha256,
-        "size": req.file.size,
-        "type": req.file.mimetype,
-        "uploaded": Math.floor(Date.now() / 1000),
-    }
+app.put(
+    '/upload',
+    authenticationMiddleware,
+    requireVerbMiddleware("upload"),
+    saveUploadedFileMiddleware(uploadOptions),
+    newFileMiddleware,
+);
 
-    const file = await getFileDoc(req.file.sha256);
-    if (file) return res.json(blobDescriptor);
-
-    const requiredVerb = "upload";
-    const isValideVerb = req.verb == requiredVerb;
-    if (!isValideVerb) {
-        return res.status(401).json({ error: `Event t tag must be ${requiredVerb}` });
-    }
-
-    if (!req.xTags.includes(req.file.sha256)) {
-        return res.status(401).json({ error: 'File hash must be in a x tag' });
-    }
-
-    const filePath = req.file.path;
-    console.log(req.file.path)
-    console.log(fs.readdirSync("/data/upload"))
-    await uploadFileWithRclone(filePath);
-    fs.unlinkSync(filePath);
-
-    res.json(blobDescriptor);
-
-    const query = `
-      INSERT INTO files (pubkey, sha256, file_size, mime_type)
-      VALUES ($1, $2, $3, $4)
-      RETURNING *;
-    `;
-    const values = [
-        req.pubkey,
-        req.file.sha256,
-        req.file.size,
-        req.file.mimetype,
-    ];
-    await pool.query(query, values);
-});
-
-app.put('/mirror', (req, res) => {
-    // TODO
-    console.log("put /mirror");
-});
+app.put(
+    '/mirror',
+    authenticationMiddleware,
+    requireVerbMiddleware("upload"),
+    async (req, res, next) => {
+        try {
+            req.file = await downloadBlobFromUrl(req.body.url, "/data/mirror_download/", maxFileSize);
+        } catch (error) {
+            return res.status(401).json({ error: `Unable to download` });
+        }
+        next();
+    },
+    newFileMiddleware,
+);
 
 app.put('/media', (req, res) => {
     // TODO
