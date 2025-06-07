@@ -13,7 +13,7 @@ Blone is a blossom server that store files on an rclone remote
 
 ## Todo
 
-- [ ] Support mirroring
+- [ ] Server gui
 
 ## Contributing
 

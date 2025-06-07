@@ -50,22 +50,39 @@ app.head('/:sha256', async (req, res) => {
 
 app.get('/list/:pubkey', async (req, res) => {
     const pubkey = req.params.pubkey;
+    const { since, until } = req.query;
 
-    const query = 'SELECT sha256, file_size, mime_type, EXTRACT(EPOCH FROM created_at)::integer AS uploaded_unix FROM files WHERE pubkey = $1';
+    let query = 'SELECT sha256, file_size, mime_type, EXTRACT(EPOCH FROM created_at)::integer AS uploaded_unix FROM files WHERE pubkey = $1';
     const values = [pubkey];
-    const result = await pool.query(query, values);
+    
+    // Add conditions for since and until parameters if they exist
+    if (since) {
+        query += ' AND created_at >= to_timestamp($2)';
+        values.push(since);
+    }
+    if (until) {
+        query += ' AND created_at <= to_timestamp($' + (values.length + 1) + ')';
+        values.push(until);
+    }
 
-    const blobsDescriptor = result.rows.map((row) => {
-        return {
-            "url": `https://${process.env.BLOSSOM_API_DOMAIN}/${row.sha256}`,
-            "sha256": row.sha256,
-            "size": row.file_size,
-            "type": row.mime_type,
-            "uploaded": row.uploaded_unix
-        };
-    });
+    try {
+        const result = await pool.query(query, values);
 
-    res.json(blobsDescriptor);
+        const blobsDescriptor = result.rows.map((row) => {
+            return {
+                "url": `https://${process.env.BLOSSOM_API_DOMAIN}/${row.sha256}`,
+                "sha256": row.sha256,
+                "size": row.file_size,
+                "type": row.mime_type,
+                "uploaded": row.uploaded_unix
+            };
+        });
+
+        res.json(blobsDescriptor);
+    } catch (error) {
+        console.error('Error fetching blobs:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
 });
 
 app.get('/:fileName', async (req, res) => {
