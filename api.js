@@ -25,6 +25,44 @@ const uploadOptions = {
 
 app.use(cors());
 
+app.head('/upload', uploadRequirementMiddleware);
+
+app.head('/media', uploadRequirementMiddleware);
+
+app.head('/:sha256', async (req, res) => {
+    console.log("here")
+    const sha256 = req.params.fileName.split('.')[0];
+
+    const query = 'SELECT * FROM files WHERE sha256 = $1';
+    const values = [sha256];
+    const result = await pool.query(query, values);
+
+    if (result.rows.length == 0) res.status(404);
+    else res.status(200);
+
+    res.end();
+});
+
+app.get('/list/:pubkey', async (req, res) => {
+    const pubkey = req.params.pubkey;
+
+    const query = 'SELECT sha256, file_size, mime_type, EXTRACT(EPOCH FROM created_at)::integer AS uploaded_unix FROM files WHERE pubkey = $1';
+    const values = [pubkey];
+    const result = await pool.query(query, values);
+
+    const blobsDescriptor = result.rows.map((row) => {
+        return {
+            "url": `https://${process.env.BLOSSOM_API_DOMAIN}/${row.sha256}`,
+            "sha256": row.sha256,
+            "size": row.file_size,
+            "type": row.mime_type,
+            "uploaded": row.uploaded_unix
+        };
+    });
+
+    res.json(blobsDescriptor);
+});
+
 app.get('/:fileName', async (req, res) => {
     const sha256 = req.params.fileName.split('.')[0];
 
@@ -44,15 +82,24 @@ app.get('/:fileName', async (req, res) => {
     });
 });
 
-app.head('/:sha256', async (req, res) => {
-    const sha256 = req.params.fileName.split('.')[0];
+app.delete('/:sha256', authenticationMiddleware, async (req, res) => {
+    const sha256 = req.params.sha256;
 
-    const query = 'SELECT * FROM files WHERE sha256 = $1';
+    const requiredVerb = "delete";
+    const isValideVerb = req.verb == requiredVerb;
+    if (!isValideVerb) {
+        return res.status(401).json({ error: `Event t tag must be ${requiredVerb}` });
+    }
+
+    if (!req.xTags.includes(req.params.sha256)) {
+        return res.status(401).json({ error: 'File hash must be in a x tag' });
+    }
+
+    const query = 'DELETE FROM files WHERE sha256 = $1 RETURNING *';
     const values = [sha256];
-    const result = await pool.query(query, values);
+    await pool.query(query, values);
 
-    if (result.rows.length == 0) res.status(404);
-    else res.status(200);
+    await deleteFileWithRclone(sha256);
 
     res.end();
 });
@@ -101,71 +148,19 @@ app.put('/upload', authenticationMiddleware, saveUploadedFileMiddleware(uploadOp
     await pool.query(query, values);
 });
 
-app.head('/upload', uploadRequirementMiddleware);
-
-app.get('/list/:pubkey', async (req, res) => {
-    const pubkey = req.params.pubkey;
-
-    const query = 'SELECT sha256, file_size, mime_type, EXTRACT(EPOCH FROM created_at)::integer AS uploaded_unix FROM files WHERE pubkey = $1';
-    const values = [pubkey];
-    const result = await pool.query(query, values);
-
-    const blobsDescriptor = result.rows.map((row) => {
-        return {
-            "url": `https://${process.env.BLOSSOM_API_DOMAIN}/${row.sha256}`,
-            "sha256": row.sha256,
-            "size": row.file_size,
-            "type": row.mime_type,
-            "uploaded": row.uploaded_unix
-        };
-    });
-
-    res.json(blobsDescriptor);
-});
-
-app.delete('/:sha256', authenticationMiddleware, async (req, res) => {
-    const sha256 = req.params.sha256;
-
-    const requiredVerb = "delete";
-    const isValideVerb = req.verb == requiredVerb;
-    if (!isValideVerb) {
-        return res.status(401).json({ error: `Event t tag must be ${requiredVerb}` });
-    }
-
-    if (!req.xTags.includes(req.params.sha256)) {
-        return res.status(401).json({ error: 'File hash must be in a x tag' });
-    }
-
-    const query = 'DELETE FROM files WHERE sha256 = $1 RETURNING *';
-    const values = [sha256];
-    await pool.query(query, values);
-
-    await deleteFileWithRclone(sha256);
-
-    res.end();
-});
-
 app.put('/mirror', (req, res) => {
-    console.log("put /mirror")
-
     // TODO
-    res.send('Hello World!');
+    console.log("put /mirror");
 });
-
-app.head('/media', uploadRequirementMiddleware);
 
 app.put('/media', (req, res) => {
-    console.log("put /media")
-
     // TODO
-    res.send('Hello World!');
+    console.log("put /media");
 });
 
 app.put('/report', (req, res) => {
-    console.log("put /report")
-
     // TODO
-    res.send('Hello World!');
+    console.log("put /report");
 });
 
 const port = process.env.BLOSSOM_API_PORT || 3000;

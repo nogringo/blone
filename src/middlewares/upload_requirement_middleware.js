@@ -3,13 +3,13 @@ export function uploadRequirementMiddleware(req, res) {
 
     if (!xContentLength) {
         return res.status(411)
-            .set('X-Reason', `File too large. Max allowed size is ${process.env.MAX_FILE_SIZE}B.`)
+            .set('X-Reason', "Missing X-Content-Length header.")
             .send('Length Required');
     }
 
     if (xContentLength > process.env.MAX_FILE_SIZE) {
         return res.status(413)
-            .set('X-Reason', 'File too large. Max allowed size is 100MB.')
+            .set('X-Reason', `File too large. Max allowed size is ${process.env.MAX_FILE_SIZE}B.`)
             .send('Content Too Large');
     }
 
