@@ -27,7 +27,7 @@ app.use(cors());
 
 app.head('/upload', uploadRequirementMiddleware);
 
-app.head('/media', uploadRequirementMiddleware);
+// app.head('/media', uploadRequirementMiddleware);
 
 app.head('/:sha256', async (req, res) => {
     console.log("here")
