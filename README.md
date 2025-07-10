@@ -13,7 +13,7 @@ Blone is a blossom server that store files on an rclone remote
 
 ## Dashboard
 
-Your Blone dashbord is available at `https://your.domain/dashboard/index.html`
+Your Blone dashboard is available at `https://your.domain/dashboard/index.html`
 
 ## Todo
 
