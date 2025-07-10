@@ -11,9 +11,13 @@ Blone is a blossom server that store files on an rclone remote
 6) Add a remote named `bucket`
 7) Run `exit`
 
+## Dashboard
+
+Your Blone dashbord is available at `https://your.domain/dashboard/index.html`
+
 ## Todo
 
-- [ ] Server gui
+- [x] Server gui
 
 ## Contributing
 

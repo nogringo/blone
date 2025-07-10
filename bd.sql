@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS users (
     bytes_stored BIGINT DEFAULT 0,
     max_bytes_stored BIGINT DEFAULT 0,
     bytes_due BIGINT DEFAULT 0,
-    last_storage_update TIMESTAMP CURRENT_TIMESTAMP,
+    last_storage_update TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     credit BIGINT DEFAULT 0
 );
 
@@ -62,8 +62,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Enable pg_cron extension
-CREATE EXTENSION IF NOT EXISTS pg_cron;
+-- Enable pg_cron extension (commented out - needs special PostgreSQL image)
+-- CREATE EXTENSION IF NOT EXISTS pg_cron;
 
--- Schedule daily billing at midnight
-SELECT cron.schedule('daily-billing', '0 0 * * *', 'SELECT update_daily_billing();');
+-- Schedule daily billing at midnight (commented out - needs pg_cron)
+-- SELECT cron.schedule('daily-billing', '0 0 * * *', 'SELECT update_daily_billing();');

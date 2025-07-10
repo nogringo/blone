@@ -2,7 +2,6 @@ services:
   db:
     image: postgres:latest
     restart: unless-stopped
-    command: postgres -c shared_preload_libraries=pg_cron -c cron.database_name=postgres
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:
@@ -17,17 +16,21 @@ services:
     restart: unless-stopped
 
   api:
-    image: ghcr.io/nogringo/blone:latest
-    # build: 
-    #   context: .
-    #   dockerfile: Dockerfile
+    # image: ghcr.io/nogringo/blone:latest
+    build: 
+      context: .
+      dockerfile: Dockerfile
     ports:
       - "${BLOSSOM_API_PORT}:3000"
     volumes:
       - bucket:/data
     restart: unless-stopped
+    depends_on:
+      - db
+      - rclone
     environment:
       DB_PASSWORD: ${DB_PASSWORD}
+      DASHBOARD_PASSWORD: ${DASHBOARD_PASSWORD}
       RCLONE_USERNAME: ${RCLONE_USERNAME}
       RCLONE_PASSWORD: ${RCLONE_PASSWORD}
       BLOSSOM_API_DOMAIN: ${BLOSSOM_API_DOMAIN}

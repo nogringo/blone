@@ -152,6 +152,23 @@ app.put('/report', (req, res) => {
     console.log("put /report");
 });
 
+app.post("/dashboard/api/users", async (req, res) => {
+    if (req.body.dashboardPassword != process.env.DASHBOARD_PASSWORD) {
+        return res.status(401).json({ error: 'Invalid dashboard password' });
+    }
+
+    try {
+        let query = 'SELECT pubkey, bytes_stored, max_bytes_stored, bytes_due, credit FROM users ORDER BY bytes_stored DESC';
+        const result = await pool.query(query);
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error fetching users:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+app.use('/dashboard', express.static('public'));
+
 const port = process.env.BLOSSOM_API_PORT || 3000;
 app.listen(port, () => {
     console.log(`Blone listening on port ${port}`);

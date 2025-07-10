@@ -2,8 +2,8 @@ node_modules
 .dockerignore
 .env
 .gitignore
-bd.sql
 compose.yml
 Dockerfile
 README.md
 .github
+blone_dashboard
