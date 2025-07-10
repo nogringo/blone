@@ -5,7 +5,6 @@ import { authenticationMiddleware } from './src/middlewares/authentication_middl
 import path from 'path';
 import fs from 'fs';
 import { saveUploadedFileMiddleware } from './src/middlewares/save_uploaded_file_middleware.js';
-import { uploadFileWithRclone } from './src/rclone/upload_file_with_rclone.js';
 import { downloadFileWithRclone } from './src/rclone/download_file_with_rclone.js';
 import { maxFileSize, pool } from './src/repository.js';
 import { deleteFileWithRclone } from './src/rclone/delete_file_with_rclone.js';
