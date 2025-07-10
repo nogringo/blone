@@ -1,5 +1,7 @@
 import { getFileDoc } from "../get_file_doc.js";
 import { uploadFileWithRclone } from "../rclone/upload_file_with_rclone.js";
+import fs from 'fs';
+import { pool } from "../repository.js";
 
 export async function newFileMiddleware(req, res) {
     if (!req.xTags.includes(req.file.sha256)) {
