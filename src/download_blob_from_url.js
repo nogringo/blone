@@ -1,8 +1,8 @@
-const https = require('https');
-const http = require('http');
-const fs = require('fs');
-const path = require('path');
-const crypto = require('crypto');
+import https from 'https';
+import http from 'http';
+import fs from 'fs';
+import path from 'path';
+import crypto from 'crypto';
 
 /**
  * Télécharge un fichier à partir d'une URL, le sauvegarde dans un dossier local
