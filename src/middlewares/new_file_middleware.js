@@ -1,3 +1,5 @@
+import { getFileDoc } from "../get_file_doc.js";
+
 export async function newFileMiddleware(req, res) {
     if (!req.xTags.includes(req.file.sha256)) {
         return res.status(401).json({ error: 'File hash must be in a x tag' });
