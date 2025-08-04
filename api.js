@@ -34,15 +34,20 @@ app.head('/upload', uploadRequirementMiddleware);
 // app.head('/media', uploadRequirementMiddleware);
 
 app.head('/:sha256', async (req, res) => {
-    console.log("here")
-    const sha256 = req.params.fileName.split('.')[0];
+    const sha256 = req.params.sha256.split('.')[0];
 
-    const query = 'SELECT * FROM files WHERE sha256 = $1';
+    const query = 'SELECT mime_type, file_size FROM files WHERE sha256 = $1';
     const values = [sha256];
     const result = await pool.query(query, values);
 
-    if (result.rows.length == 0) res.status(404);
-    else res.status(200);
+    if (result.rows.length == 0) {
+        res.status(404);
+    } else {
+        const file = result.rows[0];
+        res.status(200);
+        res.set('Content-Type', file.mime_type);
+        res.set('Content-Length', file.file_size);
+    }
 
     res.end();
 });
@@ -91,7 +96,8 @@ app.get('/:fileName', async (req, res) => {
     console.log(doc);
     if (!doc) return res.status(404).end();
 
-    const filePath = path.join(`/data/download/${randomCustomString(16)}`, sha256);
+    const tempDir = `/data/download/${randomCustomString(16)}`;
+    const filePath = path.join(tempDir, sha256);
     const rcloneSuccess = await downloadFileWithRclone(sha256, filePath);
     if (!rcloneSuccess) return res.status(404).end();
 
@@ -99,7 +105,7 @@ app.get('/:fileName', async (req, res) => {
     res.sendFile(filePath);
 
     res.on("finish", () => {
-        fs.unlinkSync(filePath);
+        fs.rmSync(tempDir, { recursive: true });
     });
 });
 
